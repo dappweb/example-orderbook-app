@@ -7,6 +7,9 @@ export const BSC_MARKET_MANAGER_API_BASE =
   process.env.NEXT_PUBLIC_BSC_MARKET_MANAGER_API_BASE ||
   'https://azuro-bsc-market-manager.dappweb.workers.dev/api/v1/public'
 
+export const BSC_MARKET_MANAGER_ADMIN_API_BASE =
+  BSC_MARKET_MANAGER_API_BASE.replace('/api/v1/public', '/api/v1/admin')
+
 export const BSC_TESTNET_RPC_URL =
   process.env.NEXT_PUBLIC_BSC_TESTNET_RPC_URL ||
   'https://bsc-testnet-rpc.publicnode.com'
