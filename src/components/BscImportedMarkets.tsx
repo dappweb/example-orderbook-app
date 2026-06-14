@@ -34,7 +34,9 @@ type BscImportedMarketsProps = {
 const erc20Abi = parseAbi([
   'function allowance(address owner, address spender) view returns (uint256)',
   'function approve(address spender, uint256 amount) returns (bool)',
+  'function availableToClaim(address account) view returns (bool)',
   'function balanceOf(address account) view returns (uint256)',
+  'function claim(address account)',
 ])
 
 const prematchCoreAbi = parseAbi([
@@ -148,7 +150,56 @@ function BscBettingMarkets({ game }: BscImportedMarketsProps) {
     },
   })
 
+  const { data: canClaim, refetch: refetchCanClaim } = useReadContract({
+    address: BSC_TESTNET_BET_TOKEN.address,
+    abi: erc20Abi,
+    functionName: 'availableToClaim',
+    chainId: BSC_TESTNET_CHAIN_ID,
+    args: [account.address as Address],
+    query: {
+      enabled: Boolean(account.address),
+    },
+  })
+
   const hasEnoughBalance = typeof balance !== 'bigint' || balance >= rawAmount
+
+  const handleClaim = async () => {
+    setMessage(null)
+
+    if (!account.address) {
+      openConnectModal?.()
+      return
+    }
+
+    if (account.chainId !== BSC_TESTNET_CHAIN_ID) {
+      await switchChainAsync({ chainId: BSC_TESTNET_CHAIN_ID })
+    }
+
+    setBusy(true)
+    try {
+      setMessage(`Claiming ${BSC_TESTNET_BET_TOKEN.symbol}...`)
+      const claimHash = await writeContractAsync({
+        address: BSC_TESTNET_BET_TOKEN.address,
+        abi: erc20Abi,
+        functionName: 'claim',
+        chainId: BSC_TESTNET_CHAIN_ID,
+        args: [account.address],
+      })
+      await waitForTransactionReceipt(config, {
+        chainId: BSC_TESTNET_CHAIN_ID,
+        hash: claimHash,
+      })
+      await refetchBalance()
+      await refetchCanClaim()
+      setMessage(`Claimed test ${BSC_TESTNET_BET_TOKEN.symbol}: ${claimHash}`)
+    } catch (error) {
+      const description =
+        error instanceof Error ? error.message : 'Claim transaction failed.'
+      setMessage(description)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const handleBet = async (outcomeId: string, rawOdds: bigint) => {
     setMessage(null)
@@ -278,8 +329,19 @@ function BscBettingMarkets({ game }: BscImportedMarketsProps) {
           <p>{BSC_TESTNET_BET_TOKEN.symbol}</p>
         </div>
         {!hasEnoughBalance && (
-          <div className="mb-3 text-red-500 text-center font-semibold">
-            Not enough {BSC_TESTNET_BET_TOKEN.symbol} balance.
+          <div className="mb-3 rounded-lg bg-[#FFFFFF0D] px-4 py-3 text-center">
+            <div className="mb-3 text-red-500 font-semibold">
+              Not enough {BSC_TESTNET_BET_TOKEN.symbol} balance.
+            </div>
+            {canClaim && (
+              <button
+                className="rounded-xl bg-primary px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={busy}
+                onClick={handleClaim}
+              >
+                Claim 100 test {BSC_TESTNET_BET_TOKEN.symbol}
+              </button>
+            )}
           </div>
         )}
         <div className="flex gap-6 flex-col sm:flex-row">
