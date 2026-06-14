@@ -1,10 +1,13 @@
 import { getDefaultConfig, getDefaultWallets } from '@rainbow-me/rainbowkit'
-import { chiliz, gnosis, polygon } from 'viem/chains'
+import { bscTestnet } from 'viem/chains'
 import { http } from 'wagmi'
+import { BSC_TESTNET_RPC_URL, registerBscTestnetChain } from './bsc'
+
+registerBscTestnetChain()
 
 const { wallets } = getDefaultWallets()
 
-const chains = [polygon, gnosis, chiliz] as const
+const chains = [bscTestnet] as const
 
 const wagmiConfig = getDefaultConfig({
   appName: 'Azuro',
@@ -12,9 +15,7 @@ const wagmiConfig = getDefaultConfig({
   wallets,
   chains,
   transports: {
-    [polygon.id]: http('https://polygon-bor-rpc.publicnode.com'),
-    [gnosis.id]: http('https://gnosis-rpc.publicnode.com'),
-    [chiliz.id]: http('https://chiliz-rpc.publicnode.com'),
+    [bscTestnet.id]: http(BSC_TESTNET_RPC_URL),
   },
   ssr: false,
 })
