@@ -58,11 +58,30 @@ function getAdminToken() {
   return window.localStorage.getItem('azuro-admin-token') || ''
 }
 
+const theOddsApiSports = [
+  { label: 'Basketball NBA', value: 'basketball_nba' },
+  { label: 'Basketball WNBA', value: 'basketball_wnba' },
+  { label: 'Soccer EPL', value: 'soccer_epl' },
+  { label: 'Soccer MLS', value: 'soccer_usa_mls' },
+  { label: 'Tennis ATP Wimbledon', value: 'tennis_atp_wimbledon' },
+  { label: 'Tennis WTA Wimbledon', value: 'tennis_wta_wimbledon' },
+  { label: 'Baseball MLB', value: 'baseball_mlb' },
+  { label: 'American Football NFL', value: 'americanfootball_nfl' },
+]
+
+const sportradarSports = [
+  { label: 'Soccer', value: 'sr:sport:1' },
+  { label: 'Basketball', value: 'sr:sport:2' },
+  { label: 'Tennis', value: 'sr:sport:5' },
+]
+
 export default function AdminEventsPage() {
   const [adminToken, setAdminToken] = useState('')
   const [events, setEvents] = useState<PendingEvent[]>([])
+  const [source, setSource] = useState<'the-odds-api' | 'sportradar'>('the-odds-api')
   const [date, setDate] = useState(getDefaultDate)
   const [sportId, setSportId] = useState('sr:sport:2')
+  const [sportKey, setSportKey] = useState('basketball_nba')
   const [message, setMessage] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [isImporting, setImporting] = useState(false)
@@ -111,22 +130,36 @@ export default function AdminEventsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminToken])
 
-  const importSportradar = async () => {
+  const importEvents = async () => {
     setImporting(true)
     setMessage(null)
     try {
+      const endpoint =
+        source === 'the-odds-api'
+          ? `${BSC_MARKET_MANAGER_ADMIN_API_BASE}/the-odds-api/import`
+          : `${BSC_MARKET_MANAGER_ADMIN_API_BASE}/sportradar/import`
+      const body =
+        source === 'the-odds-api'
+          ? {
+              date,
+              limit: 50,
+              markets: 'h2h',
+              regions: 'us',
+              sportKey,
+            }
+          : {
+              accessLevel: 'trial',
+              date,
+              language: 'en',
+              limit: 50,
+              sportId,
+            }
       const response = await fetch(
-        `${BSC_MARKET_MANAGER_ADMIN_API_BASE}/sportradar/import`,
+        endpoint,
         {
           method: 'POST',
           headers,
-          body: JSON.stringify({
-            accessLevel: 'trial',
-            date,
-            language: 'en',
-            limit: 50,
-            sportId,
-          }),
+          body: JSON.stringify(body),
         }
       )
       const data = await response.json()
@@ -134,7 +167,7 @@ export default function AdminEventsPage() {
         setMessage(`Import failed: ${JSON.stringify(data)}`)
         return
       }
-      setMessage(`Imported ${data.imported || 0} Sportradar events.`)
+      setMessage(`Imported ${data.imported || 0} ${source} events.`)
       await loadEvents()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Import failed')
@@ -265,7 +298,7 @@ export default function AdminEventsPage() {
         </button>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-3 rounded-lg bg-[#FFFFFF0D] p-4 md:grid-cols-[1.2fr_160px_180px_auto]">
+      <div className="mb-6 grid grid-cols-1 gap-3 rounded-lg bg-[#FFFFFF0D] p-4 md:grid-cols-[1.2fr_160px_180px_220px_auto]">
         <label className="flex flex-col gap-2 text-[12px] text-appGray-600">
           Admin token
           <input
@@ -286,21 +319,41 @@ export default function AdminEventsPage() {
           />
         </label>
         <label className="flex flex-col gap-2 text-[12px] text-appGray-600">
-          Sportradar sport
+          Source
           <select
             className="h-10 rounded-lg bg-[#FFFFFF1A] px-3 text-white outline-none"
-            onChange={(event) => setSportId(event.target.value)}
-            value={sportId}
+            onChange={(event) => setSource(event.target.value as 'the-odds-api' | 'sportradar')}
+            value={source}
           >
-            <option value="sr:sport:1">Soccer</option>
-            <option value="sr:sport:2">Basketball</option>
-            <option value="sr:sport:5">Tennis</option>
+            <option value="the-odds-api">The Odds API</option>
+            <option value="sportradar">Sportradar</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-2 text-[12px] text-appGray-600">
+          Sport
+          <select
+            className="h-10 rounded-lg bg-[#FFFFFF1A] px-3 text-white outline-none"
+            onChange={(event) => {
+              if (source === 'the-odds-api') {
+                setSportKey(event.target.value)
+              }
+              else {
+                setSportId(event.target.value)
+              }
+            }}
+            value={source === 'the-odds-api' ? sportKey : sportId}
+          >
+            {(source === 'the-odds-api' ? theOddsApiSports : sportradarSports).map((sport) => (
+              <option key={sport.value} value={sport.value}>
+                {sport.label}
+              </option>
+            ))}
           </select>
         </label>
         <button
           className="h-10 self-end rounded-lg bg-primary px-4 font-bold disabled:cursor-not-allowed disabled:opacity-50"
           disabled={!adminToken || isImporting}
-          onClick={importSportradar}
+          onClick={importEvents}
         >
           {isImporting ? 'Importing...' : 'Import'}
         </button>
