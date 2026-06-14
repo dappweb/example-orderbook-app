@@ -57,7 +57,7 @@ export default function AllSportsTag() {
       return 0
     }
 
-    return sports.reduce((acc, { games }) => acc + games?.length!, 0)
+    return sports.reduce((acc, { games }) => acc + (games?.length ?? 0), 0)
   }, [ sports ])
 
   return (
@@ -88,7 +88,7 @@ export default function AllSportsTag() {
                 key={sportId} 
                 sportId={sportId} 
                 title={name} 
-                count={games?.length!} 
+                count={games?.length ?? 0} 
                 isSelected={isSelected}
                 onClick={() => handleClick(slug)}
               />

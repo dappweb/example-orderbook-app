@@ -15,6 +15,7 @@ export type ExploreContextValue = {
   categories: TCategory[]
   searching: string
   bets: OutComeData
+  allBets: OutComeData
   betRange: DefaultBetRanges
   setBets: Dispatch<SetStateAction<OutComeData>>
   setBetRange: Dispatch<SetStateAction<DefaultBetRanges>>
@@ -37,6 +38,7 @@ export const ExploreContext = createContext<ExploreContextValue>({
   categories: [],
   searching: '',
   bets: {},
+  allBets: {},
   betRange: 'Single',
   filterSports: () => null,
   setBets: () => null,
